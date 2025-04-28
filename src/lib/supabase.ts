@@ -1,10 +1,8 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
 
-// These will be replaced with environment variables in a production environment
-// For Lovable preview, we can define them here
-const supabaseUrl = 'https://your-project.supabase.co';
-const supabaseAnonKey = 'your-anon-key';
+// Replace these with your actual Supabase project URL and anon key
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'your-project-url';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key';
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
