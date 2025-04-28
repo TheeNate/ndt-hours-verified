@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 type Profile = {
   id: string;
@@ -33,20 +33,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  console.log("Auth Provider initializing, loading state:", loading);
+
   useEffect(() => {
+    let mounted = true;
+    
+    console.log("Auth Provider useEffect running");
+    
     const setData = async () => {
       try {
+        console.log("Getting session from Supabase");
         const { data: { session }, error } = await supabase.auth.getSession();
+        
         if (error) {
           console.error("Error fetching session:", error);
-          setLoading(false);
+          if (mounted) setLoading(false);
           return;
         }
         
-        setSession(session);
-        setUser(session?.user ?? null);
+        console.log("Session retrieved:", session ? "Yes" : "No");
         
-        if (session?.user) {
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
+        
+        if (session?.user && mounted) {
+          console.log("Fetching profile for user:", session.user.id);
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('*')
@@ -55,7 +68,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             
           if (profileError) {
             console.error("Error fetching profile:", profileError);
-          } else {
+          } else if (mounted) {
+            console.log("Profile retrieved:", profileData ? "Yes" : "No");
             setProfile(profileData);
           }
         }
@@ -63,7 +77,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error("Unexpected error in auth context:", error);
       } finally {
         // Ensure loading is set to false even if there's an error
-        setLoading(false);
+        if (mounted) {
+          console.log("Setting loading to false");
+          setLoading(false);
+        }
       }
     };
     
@@ -72,10 +89,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("Auth state changed:", event);
-        setSession(session);
-        setUser(session?.user ?? null);
         
-        if (session?.user) {
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
+        
+        if (session?.user && mounted) {
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('*')
@@ -84,18 +104,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             
           if (profileError) {
             console.error("Error fetching profile:", profileError);
-          } else {
+          } else if (mounted) {
             setProfile(profileData);
           }
-        } else {
+        } else if (mounted) {
           setProfile(null);
         }
         
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     );
 
     return () => {
+      console.log("Auth Provider useEffect cleanup");
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
