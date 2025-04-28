@@ -1,12 +1,21 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 import { useToast } from '@/components/ui/use-toast';
 
+type Profile = {
+  id: string;
+  username: string;
+  full_name: string;
+  is_admin: boolean;
+  created_at: string;
+};
+
 type AuthContextType = {
   user: User | null;
   session: Session | null;
-  profile: any | null;
+  profile: Profile | null;
   isAdmin: boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
@@ -20,7 +29,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<any | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 

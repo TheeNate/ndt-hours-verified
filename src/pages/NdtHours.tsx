@@ -39,18 +39,38 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { Pencil, Trash2, Plus, Loader2 } from "lucide-react";
 
+type NdtEntry = {
+  id: string;
+  entry_date: string;
+  method: string;
+  location: string;
+  hours: number;
+  company: string;
+  supervisor: string;
+};
+
+type Method = {
+  id?: string;
+  name: string;
+};
+
+type Company = {
+  id?: string;
+  name: string;
+};
+
 const NdtHours = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [entries, setEntries] = useState<any[]>([]);
-  const [methods, setMethods] = useState<any[]>([]);
-  const [companies, setCompanies] = useState<any[]>([]);
+  const [entries, setEntries] = useState<NdtEntry[]>([]);
+  const [methods, setMethods] = useState<Method[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [methodInput, setMethodInput] = useState("");
   const [companyInput, setCompanyInput] = useState("");
-  const [currentEntry, setCurrentEntry] = useState({
+  const [currentEntry, setCurrentEntry] = useState<NdtEntry>({
     id: "",
     entry_date: "",
     method: "",
@@ -60,7 +80,6 @@ const NdtHours = () => {
     supervisor: "",
   });
 
-  // Fetch entries, methods, and companies when component mounts
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
@@ -68,7 +87,6 @@ const NdtHours = () => {
       setLoading(true);
       
       try {
-        // Fetch entries for the current user
         const { data: entriesData, error: entriesError } = await supabase
           .from("ndt_entries")
           .select("*")
@@ -77,7 +95,6 @@ const NdtHours = () => {
           
         if (entriesError) throw entriesError;
         
-        // Fetch methods
         const { data: methodsData, error: methodsError } = await supabase
           .from("methods")
           .select("*")
@@ -85,7 +102,6 @@ const NdtHours = () => {
           
         if (methodsError) throw methodsError;
         
-        // Fetch companies
         const { data: companiesData, error: companiesError } = await supabase
           .from("companies")
           .select("*")
@@ -110,7 +126,6 @@ const NdtHours = () => {
     fetchData();
   }, [user, toast]);
 
-  // Test Supabase connection
   useEffect(() => {
     const testConnection = async () => {
       try {
@@ -128,7 +143,6 @@ const NdtHours = () => {
   }, []);
 
   const handleAddEntry = async () => {
-    // Validate required fields
     if (!currentEntry.entry_date || !currentEntry.method || !currentEntry.company) {
       toast({
         title: "Missing required fields",
@@ -150,19 +164,16 @@ const NdtHours = () => {
       
       if (error) throw error;
       
-      // Add method if it doesn't exist yet
       if (!methods.some(m => m.name === currentEntry.method)) {
         await supabase.from("methods").insert({ name: currentEntry.method });
         setMethods([...methods, { name: currentEntry.method }]);
       }
       
-      // Add company if it doesn't exist yet
       if (!companies.some(c => c.name === currentEntry.company)) {
         await supabase.from("companies").insert({ name: currentEntry.company });
         setCompanies([...companies, { name: currentEntry.company }]);
       }
       
-      // Refresh entries
       const { data: entriesData } = await supabase
         .from("ndt_entries")
         .select("*")
@@ -176,7 +187,6 @@ const NdtHours = () => {
         description: "Your NDT hours entry has been added successfully.",
       });
       
-      // Reset form and close dialog
       setCurrentEntry({
         id: "",
         entry_date: "",
@@ -212,19 +222,16 @@ const NdtHours = () => {
       
       if (error) throw error;
       
-      // Add method if it doesn't exist yet
       if (!methods.some(m => m.name === currentEntry.method)) {
         await supabase.from("methods").insert({ name: currentEntry.method });
         setMethods([...methods, { name: currentEntry.method }]);
       }
       
-      // Add company if it doesn't exist yet
       if (!companies.some(c => c.name === currentEntry.company)) {
         await supabase.from("companies").insert({ name: currentEntry.company });
         setCompanies([...companies, { name: currentEntry.company }]);
       }
       
-      // Update entries state
       setEntries(entries.map(e => 
         e.id === currentEntry.id ? { ...e, ...currentEntry } : e
       ));
@@ -234,7 +241,6 @@ const NdtHours = () => {
         description: "Your NDT hours entry has been updated successfully.",
       });
       
-      // Close dialog
       setIsEditDialogOpen(false);
     } catch (error: any) {
       toast({
@@ -254,7 +260,6 @@ const NdtHours = () => {
       
       if (error) throw error;
       
-      // Update entries state
       setEntries(entries.filter(e => e.id !== id));
       
       toast({
@@ -270,15 +275,14 @@ const NdtHours = () => {
     }
   };
 
-  // Calculate totals by method
   const methodTotals = entries.reduce((acc, entry) => {
     const method = entry.method;
     acc[method] = (acc[method] || 0) + entry.hours;
     return acc;
   }, {} as Record<string, number>);
 
-  const totalHours = (Object.values(methodTotals) as number[])
-  .reduce((sum, hours) => sum + hours, 0);
+  const totalHours = Object.values(methodTotals)
+    .reduce((sum, hours) => sum + hours, 0);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -494,7 +498,7 @@ const NdtHours = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {(Object.entries(methodTotals) as [string, number][]).map(
+              {Object.entries(methodTotals).map(
                 ([method, hours]) => (
                   <div key={method} className="bg-gray-50 p-3 rounded-lg">
                     <div className="text-sm text-gray-500">{method}</div>
@@ -555,7 +559,6 @@ const NdtHours = () => {
                               variant="outline" 
                               size="icon"
                               onClick={(e) => {
-                                // Prevent the click from immediately opening and closing the dialog
                                 e.stopPropagation();
                                 setCurrentEntry({...entry});
                               }}
