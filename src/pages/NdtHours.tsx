@@ -110,7 +110,34 @@ const NdtHours = () => {
     fetchData();
   }, [user, toast]);
 
+  // Test Supabase connection
+  useEffect(() => {
+    const testConnection = async () => {
+      try {
+        const { data, error } = await supabase.from('companies').select('count');
+        if (error) {
+          console.error('Supabase connection error:', error);
+        } else {
+          console.log('Supabase connected successfully:', data);
+        }
+      } catch (err) {
+        console.error('Connection test failed:', err);
+      }
+    };
+    testConnection();
+  }, []);
+
   const handleAddEntry = async () => {
+    // Validate required fields
+    if (!currentEntry.entry_date || !currentEntry.method || !currentEntry.company) {
+      toast({
+        title: "Missing required fields",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (!user) return;
     
     try {
@@ -250,7 +277,8 @@ const NdtHours = () => {
     return acc;
   }, {} as Record<string, number>);
 
-  const totalHours = Object.values(methodTotals).reduce((sum, hours) => sum + hours, 0);
+  const totalHours = (Object.values(methodTotals) as number[])
+  .reduce((sum, hours) => sum + hours, 0);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -466,12 +494,14 @@ const NdtHours = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {Object.entries(methodTotals).map(([method, hours]) => (
-                <div key={method} className="bg-gray-50 p-3 rounded-lg">
-                  <div className="text-sm text-gray-500">{method}</div>
-                  <div className="text-xl font-semibold">{hours} hrs</div>
-                </div>
-              ))}
+              {(Object.entries(methodTotals) as [string, number][]).map(
+                ([method, hours]) => (
+                  <div key={method} className="bg-gray-50 p-3 rounded-lg">
+                    <div className="text-sm text-gray-500">{method}</div>
+                    <div className="text-xl font-semibold">{hours} hrs</div>
+                  </div>
+                )
+              )}
             </div>
           </CardContent>
         </Card>
@@ -524,7 +554,11 @@ const NdtHours = () => {
                             <Button 
                               variant="outline" 
                               size="icon"
-                              onClick={() => setCurrentEntry({...entry})}
+                              onClick={(e) => {
+                                // Prevent the click from immediately opening and closing the dialog
+                                e.stopPropagation();
+                                setCurrentEntry({...entry});
+                              }}
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
@@ -725,4 +759,3 @@ const NdtHours = () => {
 };
 
 export default NdtHours;
-
