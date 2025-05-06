@@ -4,6 +4,10 @@ import { supabase } from '@/lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 import { useToast } from '@/hooks/use-toast';
 import { AuthContextType, Profile } from '@/types/auth';
+import { useAuthSignUp } from '@/hooks/useAuthSignUp';
+import { useAuthSignIn } from '@/hooks/useAuthSignIn';
+import { useAuthSignOut } from '@/hooks/useAuthSignOut';
+import { useAuthResetPassword } from '@/hooks/useAuthResetPassword';
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -126,143 +130,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-// Auth method hooks
-interface AuthMethodProps {
-  setLoading: React.Dispatch<React.SetStateAction<boolean>>;
-  toast: any;
-}
-
-function useAuthSignUp({ setLoading, toast }: AuthMethodProps) {
-  const signUp = async (email: string, password: string, username: string, fullName: string) => {
-    try {
-      setLoading(true);
-      
-      // Check if username already exists
-      const { data: existingUser } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('username', username)
-        .single();
-      
-      if (existingUser) {
-        toast({
-          title: "Registration failed",
-          description: "Username already taken. Please choose another one.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      const { data, error } = await supabase.auth.signUp({ email, password });
-      
-      if (error) {
-        toast({
-          title: "Registration failed",
-          description: error.message,
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      if (data.user) {
-        const { error: profileError } = await supabase.from('profiles').insert({
-          id: data.user.id,
-          username,
-          full_name: fullName,
-          is_admin: false,
-        });
-        
-        if (profileError) {
-          toast({
-            title: "Profile creation failed",
-            description: profileError.message,
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Registration successful",
-            description: "Please check your email to verify your account.",
-          });
-        }
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return { signUp };
-}
-
-function useAuthSignIn({ setLoading, toast }: AuthMethodProps) {
-  const signIn = async (email: string, password: string) => {
-    try {
-      setLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      
-      if (error) {
-        toast({
-          title: "Login failed",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return { signIn };
-}
-
-function useAuthSignOut({ setLoading, toast }: AuthMethodProps) {
-  const signOut = async () => {
-    try {
-      setLoading(true);
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        toast({
-          title: "Sign out failed",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return { signOut };
-}
-
-function useAuthResetPassword({ setLoading, toast }: AuthMethodProps) {
-  const resetPassword = async (email: string) => {
-    try {
-      setLoading(true);
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      
-      if (error) {
-        toast({
-          title: "Password reset failed",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Password reset email sent",
-          description: "Please check your email to reset your password.",
-        });
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return { resetPassword };
 }
 
 // Export the hook from this file for backward compatibility
