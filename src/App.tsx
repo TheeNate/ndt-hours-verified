@@ -13,6 +13,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import NdtHours from "./pages/NdtHours";
+import RopeHours from "./pages/RopeHours";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/" element={<Layout requireAuth={true} />}>
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="ndt-hours" element={<NdtHours />} />
+              <Route path="rope-hours" element={<RopeHours />} />
             </Route>
             <Route path="/" element={<Layout requireAuth={true} adminOnly={true} />}>
               {/* Admin routes will go here */}
