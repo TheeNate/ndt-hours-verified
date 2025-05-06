@@ -1,13 +1,20 @@
+// src/lib/supabase.ts
+import { createClient } from "@supabase/supabase-js";
+import { Database } from "@/types/supabase";
+import { supabase as mockSupabase } from "./supabaseMock";
 
-import { createClient } from '@supabase/supabase-js';
-import { Database } from '@/types/supabase';
+// Load your env-vars
+const supabaseUrl   = import.meta.env.VITE_SUPABASE_URL   || "your-project-url";
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "your-anon-key";
 
-// Use the environment variables from .env file
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'your-project-url';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key';
+// Toggle mock vs. real
+const useMock = import.meta.env.VITE_USE_MOCK_SUPABASE === "true";
 
-// Create a single supabase client for interacting with your database
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+// Debug output
+console.log("🔌 Supabase mode:", useMock ? "MOCK" : "REAL");
+console.log("🔌 Supabase URL:", supabaseUrl);
 
-// Add debugging to verify connection
-console.log("Supabase initialization with URL:", supabaseUrl.substring(0, 15) + "...");
+// Export the appropriate client
+export const supabase = useMock
+  ? mockSupabase
+  : createClient<Database>(supabaseUrl, supabaseAnonKey);

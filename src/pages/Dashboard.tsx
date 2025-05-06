@@ -21,76 +21,86 @@ const Dashboard = () => {
   const [methodTotals, setMethodTotals] = useState<{ method: string; hours: number }[]>([]);
 
   useEffect(() => {
-    console.log("🔄 [Dashboard] useEffect fired – user:", user);
-    
-
+    console.log("🔄 [Dashboard] useEffect fired — user:", user);
+    setLoading(true);
+  
+    if (!user) {
+      console.log("⚠️ [Dashboard] no user, bailing out and stopping loading");
+      setLoading(false);
+      return;
+    }
+  
     const fetchDashboardData = async () => {
+      // 1️⃣ Quick connectivity check
+      console.log("ℹ️ [Dashboard] running Supabase test query…");
       try {
-        if (!user) return;
-
-        // Fetch NDT entries
+        const { data: testData, error: testError } = await supabase
+          .from("ndt_entries")
+          .select("id")
+          .limit(1);
+        console.log("🔍 [Dashboard] test query result:", { testData, testError });
+      } catch (err) {
+        console.error("❌ [Dashboard] test query threw:", err);
+      }
+  
+      // 2️⃣ Real data fetch
+      try {
+        console.log("ℹ️ [Dashboard] fetching NDT entries…");
         const { data: ndtEntries, error: ndtError } = await supabase
           .from("ndt_entries")
           .select("*")
           .eq("user_id", user.id);
-
         if (ndtError) throw ndtError;
-
-        // Fetch Rope entries
+  
+        console.log("ℹ️ [Dashboard] fetching Rope entries…");
         const { data: ropeEntries, error: ropeError } = await supabase
           .from("rope_entries")
           .select("*")
           .eq("user_id", user.id);
-
         if (ropeError) throw ropeError;
-
-        // Fetch signature counts
+  
+        console.log("ℹ️ [Dashboard] fetching Signatures…");
         const { data: signatures, error: sigError } = await supabase
           .from("ndt_signatures")
           .select("status")
           .eq("technician_id", user.id);
-
         if (sigError) throw sigError;
-
-        // Calculate totals
-        const totalNdtHours = ndtEntries?.reduce((sum, entry) => sum + (entry.hours || 0), 0) || 0;
-        const totalRopeHours = ropeEntries?.reduce((sum, entry) => sum + (entry.rope_hours || 0), 0) || 0;
-        
-        const pendingCount = signatures?.filter(sig => sig.status === "Pending").length || 0;
-        const verifiedCount = signatures?.filter(sig => sig.status === "Confirmed").length || 0;
-
-        // Calculate method totals
+  
+        // Calculate and set stats
+        const totalNdtHours = ndtEntries.reduce((sum, e) => sum + (e.hours || 0), 0);
+        const totalRopeHours = ropeEntries.reduce((sum, e) => sum + (e.rope_hours || 0), 0);
+        const pendingCount = signatures.filter(s => s.status === "Pending").length;
+        const verifiedCount = signatures.filter(s => s.status === "Confirmed").length;
+  
         const methodsMap = new Map<string, number>();
-        ndtEntries?.forEach(entry => {
-          const method = entry.method;
-          const hours = entry.hours || 0;
-          methodsMap.set(method, (methodsMap.get(method) || 0) + hours);
+        ndtEntries.forEach(e => {
+          const hrs = e.hours || 0;
+          methodsMap.set(e.method, (methodsMap.get(e.method) || 0) + hrs);
         });
-
-        const methodTotalsArray = Array.from(methodsMap).map(([method, hours]) => ({
-          method,
-          hours
-        }));
-
+        const methodTotalsArray = Array.from(methodsMap, ([method, hours]) => ({ method, hours }));
+  
         setStats({
           totalNdtHours,
           totalRopeHours,
-          ndtEntries: ndtEntries?.length || 0,
-          ropeEntries: ropeEntries?.length || 0,
+          ndtEntries: ndtEntries.length,
+          ropeEntries: ropeEntries.length,
           pendingSignatures: pendingCount,
           verifiedSignatures: verifiedCount,
         });
-
         setMethodTotals(methodTotalsArray);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
+  
+        console.log("✅ [Dashboard] data loaded, updating UI");
+      } catch (err) {
+        console.error("❌ [Dashboard] data fetch error:", err);
+      } finally {
+        console.log("🏁 [Dashboard] fetchDashboardData complete — loading=false");
         setLoading(false);
       }
     };
-
+  
     fetchDashboardData();
   }, [user]);
+  
 
   if (loading) {
     return (
