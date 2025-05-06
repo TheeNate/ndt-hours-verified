@@ -1,30 +1,11 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 import { useToast } from '@/hooks/use-toast';
+import { AuthContextType, Profile } from '@/types/auth';
 
-type Profile = {
-  id: string;
-  username: string;
-  full_name: string;
-  is_admin: boolean;
-  created_at: string;
-};
-
-type AuthContextType = {
-  user: User | null;
-  session: Session | null;
-  profile: Profile | null;
-  isAdmin: boolean;
-  loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, username: string, fullName: string) => Promise<void>;
-  signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
-};
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -122,6 +103,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // Import the authentication methods from separate files
+  const { signUp } = useAuthSignUp({ setLoading, toast });
+  const { signIn } = useAuthSignIn({ setLoading, toast });
+  const { signOut } = useAuthSignOut({ setLoading, toast });
+  const { resetPassword } = useAuthResetPassword({ setLoading, toast });
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        profile,
+        isAdmin: profile?.is_admin || false,
+        loading,
+        signIn,
+        signUp,
+        signOut,
+        resetPassword,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+// Auth method hooks
+interface AuthMethodProps {
+  setLoading: React.Dispatch<React.SetStateAction<boolean>>;
+  toast: any;
+}
+
+function useAuthSignUp({ setLoading, toast }: AuthMethodProps) {
   const signUp = async (email: string, password: string, username: string, fullName: string) => {
     try {
       setLoading(true);
@@ -179,6 +192,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  return { signUp };
+}
+
+function useAuthSignIn({ setLoading, toast }: AuthMethodProps) {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
@@ -196,6 +213,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  return { signIn };
+}
+
+function useAuthSignOut({ setLoading, toast }: AuthMethodProps) {
   const signOut = async () => {
     try {
       setLoading(true);
@@ -213,6 +234,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  return { signOut };
+}
+
+function useAuthResetPassword({ setLoading, toast }: AuthMethodProps) {
   const resetPassword = async (email: string) => {
     try {
       setLoading(true);
@@ -237,29 +262,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        session,
-        profile,
-        isAdmin: profile?.is_admin || false,
-        loading,
-        signIn,
-        signUp,
-        signOut,
-        resetPassword,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  return { resetPassword };
 }
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+// Export the hook from this file for backward compatibility
+export { useAuth } from '@/hooks/useAuth';
