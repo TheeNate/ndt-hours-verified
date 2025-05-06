@@ -21,6 +21,9 @@ const Dashboard = () => {
   const [methodTotals, setMethodTotals] = useState<{ method: string; hours: number }[]>([]);
 
   useEffect(() => {
+    console.log("🔄 [Dashboard] useEffect fired – user:", user);
+    
+
     const fetchDashboardData = async () => {
       try {
         if (!user) return;

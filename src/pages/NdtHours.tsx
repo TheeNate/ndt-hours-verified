@@ -81,7 +81,13 @@ const NdtHours = () => {
   });
 
   useEffect(() => {
+    console.log("🔄 [NdtHours] useEffect fired – user:", user);    // ← here
+
+
     const fetchData = async () => {
+      console.log("▶️ [NdtHours] fetchData() start");             // ← and here
+
+
       if (!user) return;
       
       setLoading(true);
