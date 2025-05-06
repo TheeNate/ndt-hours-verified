@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 import { useToast } from '@/hooks/use-toast';
@@ -17,75 +17,81 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  // Handle auth state changes and profile fetching
   useEffect(() => {
-    let mounted = true;
-
-    const loadAuth = async () => {
+    console.log('Setting up auth listeners');
+    
+    // Initial session fetch
+    const fetchInitialSession = async () => {
       try {
-        console.log('AuthProvider: fetching session...');
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) throw sessionError;
-
-        if (mounted) {
-          setSession(session);
-          setUser(session?.user ?? null);
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error fetching session:', error);
+          setLoading(false);
+          return;
         }
-
-        if (session?.user && mounted) {
-          console.log('AuthProvider: fetching profile for user', session.user.id);
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-          if (profileError) throw profileError;
-          if (mounted) setProfile(profileData);
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // Fetch profile if we have a user
+        if (session?.user) {
+          fetchProfile(session.user.id);
+        } else {
+          setLoading(false);
         }
       } catch (err) {
-        console.error('AuthProvider loadAuth error:', err);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-          console.log('AuthProvider: initial load complete');
-        }
+        console.error('Error in fetchInitialSession:', err);
+        setLoading(false);
       }
     };
-
-    loadAuth();
-
+    
+    // Helper function to fetch profile
+    const fetchProfile = async (userId: string) => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
+          
+        if (error) {
+          console.error('Error fetching profile:', error);
+        } else {
+          setProfile(data);
+        }
+      } catch (err) {
+        console.error('Error in fetchProfile:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchInitialSession();
+    
+    // Set up auth state change subscriber
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        try {
-          console.log('AuthProvider: auth state changed:', _event);
-          if (mounted) {
-            setSession(session);
-            setUser(session?.user ?? null);
+      async (event, newSession) => {
+        console.log('Auth state changed:', event);
+        
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+        
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (newSession?.user) {
+            fetchProfile(newSession.user.id);
           }
-
-          if (session?.user && mounted) {
-            const { data: profileData, error: profileError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
-            if (profileError) throw profileError;
-            if (mounted) setProfile(profileData);
-          } else if (mounted) {
-            setProfile(null);
-          }
-        } catch (err) {
-          console.error('AuthProvider onAuthStateChange error:', err);
-        } finally {
-          if (mounted) {
-            setLoading(false);
-            console.log('AuthProvider: state change handling complete');
-          }
+        } else if (event === 'SIGNED_OUT') {
+          setProfile(null);
+          setLoading(false);
         }
       }
     );
-
+    
+    // Cleanup subscription when component unmounts
     return () => {
-      mounted = false;
+      console.log('Cleaning up auth subscriptions');
       subscription.unsubscribe();
     };
   }, []);
