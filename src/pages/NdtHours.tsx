@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
+import { v4 as uuidv4 } from "uuid";
 import {
   Card,
   CardContent,
@@ -81,13 +82,9 @@ const NdtHours = () => {
   });
 
   useEffect(() => {
-    console.log("🔄 [NdtHours] useEffect fired – user:", user);    // ← here
-
-
+    console.log("🔄 [NdtHours] useEffect fired – user:", user);    
     const fetchData = async () => {
-      console.log("▶️ [NdtHours] fetchData() start");             // ← and here
-
-
+      console.log("▶️ [NdtHours] fetchData() start");             
       if (!user) return;
       
       setLoading(true);
@@ -161,23 +158,31 @@ const NdtHours = () => {
     if (!user) return;
     
     try {
+      // Generate a UUID for the new entry
+      const newEntryId = uuidv4();
+      
       const newEntry = {
         ...currentEntry,
+        id: newEntryId,
         user_id: user.id,
       };
+      
+      console.log("Creating new entry with:", newEntry);
       
       const { error } = await supabase.from("ndt_entries").insert(newEntry);
       
       if (error) throw error;
       
       if (!methods.some(m => m.name === currentEntry.method)) {
-        await supabase.from("methods").insert({ name: currentEntry.method });
-        setMethods([...methods, { name: currentEntry.method }]);
+        const methodId = uuidv4();
+        await supabase.from("methods").insert({ id: methodId, name: currentEntry.method });
+        setMethods([...methods, { id: methodId, name: currentEntry.method }]);
       }
       
       if (!companies.some(c => c.name === currentEntry.company)) {
-        await supabase.from("companies").insert({ name: currentEntry.company });
-        setCompanies([...companies, { name: currentEntry.company }]);
+        const companyId = uuidv4();
+        await supabase.from("companies").insert({ id: companyId, name: currentEntry.company });
+        setCompanies([...companies, { id: companyId, name: currentEntry.company }]);
       }
       
       const { data: entriesData } = await supabase
@@ -204,6 +209,7 @@ const NdtHours = () => {
       });
       setIsAddDialogOpen(false);
     } catch (error: any) {
+      console.error("Error adding entry:", error);
       toast({
         title: "Error adding entry",
         description: error.message,
@@ -229,13 +235,15 @@ const NdtHours = () => {
       if (error) throw error;
       
       if (!methods.some(m => m.name === currentEntry.method)) {
-        await supabase.from("methods").insert({ name: currentEntry.method });
-        setMethods([...methods, { name: currentEntry.method }]);
+        const methodId = uuidv4();
+        await supabase.from("methods").insert({ id: methodId, name: currentEntry.method });
+        setMethods([...methods, { id: methodId, name: currentEntry.method }]);
       }
       
       if (!companies.some(c => c.name === currentEntry.company)) {
-        await supabase.from("companies").insert({ name: currentEntry.company });
-        setCompanies([...companies, { name: currentEntry.company }]);
+        const companyId = uuidv4();
+        await supabase.from("companies").insert({ id: companyId, name: currentEntry.company });
+        setCompanies([...companies, { id: companyId, name: currentEntry.company }]);
       }
       
       setEntries(entries.map(e => 
